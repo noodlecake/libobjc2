@@ -45,6 +45,12 @@ __attribute__((weak)) void (*dispatch_end_thread_4GC)(void);
 __attribute__((weak)) void *(*_dispatch_begin_NSAutoReleasePool)(void);
 __attribute__((weak)) void (*_dispatch_end_NSAutoReleasePool)(void *);
 
+__attribute__((used))
+static void link_protos(void)
+{
+	link_protocol_classes();
+}
+
 static void init_runtime(void)
 {
 	static BOOL first_run = YES;
@@ -206,6 +212,13 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		case NewABI:
 			break;
 	}
+
+	// If we've already loaded this module, don't load it again.
+	if (init->version == ULONG_MAX)
+	{
+		return;
+	}
+
 	assert(init->version == 0);
 	assert((((uintptr_t)init->sel_end-(uintptr_t)init->sel_begin) % sizeof(*init->sel_begin)) == 0);
 	assert((((uintptr_t)init->cls_end-(uintptr_t)init->cls_begin) % sizeof(*init->cls_begin)) == 0);
@@ -218,7 +231,6 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		}
 		objc_register_selector(sel);
 	}
-	int i = 0;
 	for (struct objc_protocol *proto = init->proto_begin ; proto < init->proto_end ;
 	     proto++)
 	{
@@ -309,7 +321,7 @@ OBJC_PUBLIC void __objc_load(struct objc_init *init)
 		}
 	}
 #endif
-	init->version = 0xffffffffffffffffULL;
+	init->version = ULONG_MAX;
 }
 
 #ifdef OLDABI_COMPAT

@@ -79,7 +79,7 @@ struct objc_protocol_method_description_list
  * array of some future version of these structs, which have fields appended
  * that this version of the runtime does not know about.
  */
-static struct objc_protocol_method_description *
+static inline struct objc_protocol_method_description *
 protocol_method_at_index(struct objc_protocol_method_description_list *l, int i)
 {
 	assert(l->size >= sizeof(struct objc_protocol_method_description));
@@ -231,5 +231,13 @@ struct objc_protocol_list
 	struct objc_protocol      *list[];
 };
 // end: objc_protocol_list
+
+
+/**
+ * Function that ensures that protocol classes are linked.  Calling this
+ * guarantees that the Protocol classes are linked into a statically linked
+ * runtime.
+ */
+void link_protocol_classes(void);
 
 #endif // PROTOCOL_H_INCLUDED
