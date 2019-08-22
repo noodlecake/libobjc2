@@ -54,9 +54,9 @@
 	stp    fp, lr, [sp, #192]
 	add    fp, sp, 192
 	stp    \receiver, x8, [sp, #-16]!
-	.cfi_def_cfa fp, 0
-	.cfi_offset fp, 0
-	.cfi_offset lr, 8
+	.cfi_def_cfa fp, 16
+	.cfi_offset fp, -16
+	.cfi_offset lr, -8
 	                                      // We now have all argument registers, the link
 	                                      // register and the receiver spilled on the
 	                                      // stack, with sp containing
@@ -76,7 +76,7 @@
 	ldp    q4, q5, [sp, #144]
 	ldp    q6, q7, [sp, #176]
 	ldp    fp, lr, [sp, #208]
-	ldp    \receiver, x8, [sp], #16
+	ldp    \receiver, x8, [sp], #(ARGUMENT_SPILL_SIZE + 16)
 	br     x9
 6:
 	adrp   x10, :got:SmallObjectClasses
