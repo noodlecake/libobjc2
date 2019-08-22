@@ -14,7 +14,6 @@ ptrdiff_t objc_sizeof_type(const char *);
 
 PRIVATE void objc_compute_ivar_offsets(Class class)
 {
-	struct objc_ivar_list_legacy *legacy = NULL;
 	if (class->ivars == NULL)
 	{
 		Class super_class = class_getSuperclass(class);
@@ -47,7 +46,6 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			}
 			ivar_start = super->instance_size;
 		}
-		long class_size = 0 - class->instance_size;
 		class->instance_size = ivar_start;
 		/* For each instance variable, we add the offset if required (it will be zero
 		* if this class is compiled with a static ivar layout).  We then set the
@@ -65,8 +63,10 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 			// If the first instance variable had any alignment padding, then we need 
 			// to discard it.  We will recompute padding ourself later.
 			long next_ivar = ivar_start;
-			long last_offset = -1;
+			long last_offset = LONG_MIN;
+			long last_size = 0;
 			long last_computed_offset = -1;
+			size_t refcount_size = isGCEnabled ? 0 : sizeof(uintptr_t);
 			for (i = 0 ; i < class->ivars->count ; i++)
 			{
 				struct objc_ivar *ivar = ivar_at_index(class->ivars, i);
@@ -81,29 +81,30 @@ PRIVATE void objc_compute_ivar_offsets(Class class)
 				// the time, but if we have an instance variable that is a vector type
 				// then we will need to ensure that we are properly aligned again.
 				long ivar_size = ivar->size;
-				if (*ivar->offset == last_offset)
+				// Bitfields have the same offset - the base of the variable
+				// that contains them.  If we are in a bitfield, then we need
+				// to make sure that we don't add any displacement from the
+				// previous value.
+				if (*ivar->offset < last_offset + last_size)
 				{
-					*ivar->offset = last_computed_offset;
+					*ivar->offset = last_computed_offset + (*ivar->offset - last_offset);
+					ivar_size = 0;
+					continue;
 				}
-				else
+				last_offset = *ivar->offset;
+				*ivar->offset = next_ivar;
+				last_computed_offset = *ivar->offset;
+				next_ivar += ivar_size;
+				last_size = ivar->size;
+				size_t align = ivarGetAlign(ivar);
+				if ((*ivar->offset + refcount_size) % align != 0)
 				{
-					last_offset = *ivar->offset;
-					*ivar->offset = next_ivar;
-					last_computed_offset = *ivar->offset;
-					next_ivar += ivar_size;
-				}
-				// We only need to do the realignment for things that are
-				// bigger than a pointer, and we don't need to do it in GC mode
-				// where we don't add any extra padding.
-				if (!isGCEnabled && (ivarGetAlign(ivar) > __alignof__(void*)))
-				{
-					long offset = *ivar->offset + sizeof(intptr_t);
-					long padding = ivarGetAlign(ivar) - (offset % ivarGetAlign(ivar));
+					long padding = align - ((*ivar->offset + refcount_size) % align); 
 					*ivar->offset += padding;
 					class->instance_size += padding;
 					next_ivar += padding;
-					assert((*ivar->offset + sizeof(intptr_t)) % ivarGetAlign(ivar) == 0);
 				}
+				assert((*ivar->offset + sizeof(uintptr_t)) % ivarGetAlign(ivar) == 0);
 				class->instance_size += ivar_size;
 			}
 #ifdef OLDABI_COMPAT

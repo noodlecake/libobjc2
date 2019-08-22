@@ -203,11 +203,15 @@ function(test_cxx CXX_RUNTIME_NAME IS_STDLIB)
 	find_library(CXX_RUNTIME_LIB NAMES ${CXX_RUNTIME_NAME})
 	if (CXX_RUNTIME_LIB)
 		message(STATUS "Testing ${CXX_RUNTIME_LIB} as the C++ runtime library")
+		if (ANDROID)
+			# pass on Android toolchain flags
+			set(CXX_RUNTIME_FLAGS "-DANDROID_NDK=${ANDROID_NDK}" "-DANDROID_ABI=${ANDROID_ABI}" "-DANDROID_ARM_MODE=${ANDROID_ARM_MODE}" "-DANDROID_ARM_NEON=${ANDROID_ARM_NEON}" "-DANDROID_LD=${ANDROID_LD}" "-DANDROID_PLATFORM=${ANDROID_PLATFORM}" "-DANDROID_STL=${ANDROID_STL}")
+		endif()
 		try_compile(USERUNTIME 
 			"${CMAKE_BINARY_DIR}/CMake"
 			"${CMAKE_CURRENT_LIST_DIR}/CMake"
 			test_cxx_runtime
-			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}")
+			CMAKE_FLAGS "-DCXX_RUNTIME=${CXX_RUNTIME_LIB}" ${CXX_RUNTIME_FLAGS})
 		if (USERUNTIME)
 			set(CXX_RUNTIME ${CXX_RUNTIME_LIB} PARENT_SCOPE)
 		endif()
@@ -295,7 +299,7 @@ if (ENABLE_OBJCXX)
 		# We don't want to link the STL implementation (e.g. libstdc++) if
 		# we have a separate C++ runtime.
 		set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
-		target_link_libraries(objc ${CXX_RUNTIME})
+		target_link_libraries(objc ${CXX_RUNTIME} -fuse-ld=gold)
 	endif()
 	list(APPEND libobjc_CXX_SRCS ${libobjcxx_CXX_SRCS})
 	target_sources(objc PRIVATE ${libobjc_CXX_SRCS})

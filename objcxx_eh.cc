@@ -82,6 +82,10 @@ struct __cxa_exception
 	terminate_handler terminateHandler;
 	__cxa_exception *nextException;
 	int handlerCount;
+#if defined(__arm__) && !defined(__ARM_DWARF_EH__)
+	_Unwind_Exception *nextCleanup;
+	int cleanupCount;
+#endif
 	int handlerSwitchValue;
 	const char *actionRecord;
 	const char *languageSpecificData;

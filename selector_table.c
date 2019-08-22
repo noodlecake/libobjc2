@@ -75,7 +75,7 @@ static inline struct sel_type_list *selLookup(uint32_t idx)
 	return selLookup_locked(idx);
 }
 
-PRIVATE inline BOOL isSelRegistered(SEL sel)
+PRIVATE BOOL isSelRegistered(SEL sel)
 {
 	if ((uintptr_t)sel->name < (uintptr_t)selector_count)
 	{
@@ -109,7 +109,7 @@ static const char *skip_irrelevant_type_info(const char *t)
 	{
 		default: return t;
 		case 'r': case 'n': case 'N': case 'o': case 'O': case 'R':
-		case 'V': case '!': case '0'...'9':
+		case 'V': case 'A': case '!': case '0'...'9':
 			return skip_irrelevant_type_info(t+1);
 	}
 }
